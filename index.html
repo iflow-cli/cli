@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跳一跳小游戏</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="score">得分: <span id="score">0</span></div>
+            <div class="high-score">最高分: <span id="high-score">0</span></div>
+        </div>
+        <div class="game-board" id="game-board">
+            <!-- 游戏平台将通过JavaScript生成 -->
+        </div>
+        <div class="game-controls">
+            <button id="start-btn" class="btn">开始游戏</button>
+            <button id="restart-btn" class="btn hidden">重新开始</button>
+        </div>
+        <div class="instructions">
+            <p>点击并按住鼠标/触摸屏幕蓄力，释放后小球将跳跃到目标平台</p>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
