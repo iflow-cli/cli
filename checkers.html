@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跳跳棋</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .game-info {
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            border: 3px solid #5d4037;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .light {
+            background-color: #f0d9b5;
+        }
+        
+        .dark {
+            background-color: #b58863;
+        }
+        
+        .piece {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        
+        .piece:hover {
+            transform: scale(1.1);
+        }
+        
+        .player1 {
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #d63031);
+            color: white;
+        }
+        
+        .player2 {
+            background: radial-gradient(circle at 30% 30%, #6c5ce7, #2d3436);
+            color: white;
+        }
+        
+        .king::after {
+            content: "♔";
+            position: absolute;
+            font-size: 20px;
+            color: gold;
+            font-weight: bold;
+        }
+        
+        .possible-move {
+            position: relative;
+        }
+        
+        .possible-move::before {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(0, 255, 0, 0.5);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .controls {
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 0 10px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>跳跳棋</h1>
+    <div class="game-info">
+        <span id="current-player">当前玩家: 玩家 1</span>
+        <span id="game-status" style="margin-left: 20px;"></span>
+    </div>
+    <div class="board" id="board"></div>
+    <div class="controls">
+        <button id="reset-btn">重置游戏</button>
+    </div>
+
+    <script>
+        class CheckersGame {
+            constructor() {
+                this.board = [];
+                this.currentPlayer = 1;
+                this.selectedPiece = null;
+                this.gameOver = false;
+                this.initBoard();
+                this.renderBoard();
+                this.updateGameInfo();
+                
+                document.getElementById('reset-btn').addEventListener('click', () => {
+                    this.resetGame();
+                });
+            }
+            
+            initBoard() {
+                // 初始化8x8棋盘
+                this.board = [];
+                for (let row = 0; row < 8; row++) {
+                    this.board[row] = [];
+                    for (let col = 0; col < 8; col++) {
+                        // 只有深色格子才有棋子
+                        if ((row + col) % 2 === 1) {
+                            if (row < 3) {
+                                // 玩家2的棋子 (顶部3行)
+                                this.board[row][col] = { player: 2, isKing: false };
+                            } else if (row > 4) {
+                                // 玩家1的棋子 (底部3行)
+                                this.board[row][col] = { player: 1, isKing: false };
+                            } else {
+                                // 空格子
+                                this.board[row][col] = null;
+                            }
+                        } else {
+                            // 浅色格子始终为空
+                            this.board[row][col] = null;
+                        }
+                    }
+                }
+            }
+            
+            renderBoard() {
+                const boardElement = document.getElementById('board');
+                boardElement.innerHTML = '';
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = document.createElement('div');
+                        square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                        square.dataset.row = row;
+                        square.dataset.col = col;
+                        
+                        const piece = this.board[row][col];
+                        if (piece) {
+                            const pieceElement = document.createElement('div');
+                            pieceElement.className = `piece player${piece.player}`;
+                            if (piece.isKing) {
+                                pieceElement.classList.add('king');
+                                pieceElement.textContent = '♔';
+                            }
+                            pieceElement.dataset.row = row;
+                            pieceElement.dataset.col = col;
+                            
+                            pieceElement.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                this.handlePieceClick(row, col);
+                            });
+                            
+                            square.appendChild(pieceElement);
+                        }
+                        
+                        square.addEventListener('click', () => {
+                            this.handleSquareClick(row, col);
+                        });
+                        
+                        boardElement.appendChild(square);
+                    }
+                }
+            }
+            
+            handlePieceClick(row, col) {
+                if (this.gameOver) return;
+                
+                const piece = this.board[row][col];
+                
+                // 如果是当前玩家的棋子，选中它
+                if (piece && piece.player === this.currentPlayer) {
+                    this.selectedPiece = { row, col };
+                    this.renderBoard(); // 重新渲染以显示选中状态
+                    this.highlightPossibleMoves(row, col);
+                }
+                // 如果已经选中了一个棋子，尝试移动
+                else if (this.selectedPiece) {
+                    this.movePiece(this.selectedPiece.row, this.selectedPiece.col, row, col);
+                }
+            }
+            
+            handleSquareClick(row, col) {
+                if (this.gameOver) return;
+                
+                // 如果已经选中了一个棋子，尝试移动到这个格子
+                if (this.selectedPiece) {
+                    this.movePiece(this.selectedPiece.row, this.selectedPiece.col, row, col);
+                }
+            }
+            
+            highlightPossibleMoves(row, col) {
+                // 这个函数会在UI中高亮可能的移动位置
+                const possibleMoves = this.getPossibleMoves(row, col);
+                
+                for (const move of possibleMoves) {
+                    const square = document.querySelector(`.square[data-row="${move.toRow}"][data-col="${move.toCol}"]`);
+                    if (square) {
+                        square.classList.add('possible-move');
+                    }
+                }
+            }
+            
+            getPossibleMoves(row, col) {
+                const piece = this.board[row][col];
+                if (!piece || piece.player !== this.currentPlayer) return [];
+                
+                const moves = [];
+                const directions = [];
+                
+                // 普通棋子的移动方向
+                if (!piece.isKing) {
+                    if (piece.player === 1) {
+                        // 玩家1向下移动 (row增加)
+                        directions.push({ dr: 1, dc: -1 }, { dr: 1, dc: 1 });
+                    } else {
+                        // 玩家2向上移动 (row减少)
+                        directions.push({ dr: -1, dc: -1 }, { dr: -1, dc: 1 });
+                    }
+                } else {
+                    // 王棋可以向四个方向移动
+                    directions.push({ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 });
+                }
+                
+                // 检查普通移动和跳跃
+                for (const dir of directions) {
+                    // 普通移动
+                    const newRow = row + dir.dr;
+                    const newCol = col + dir.dc;
+                    
+                    if (this.isValidPosition(newRow, newCol)) {
+                        if (!this.board[newRow][newCol]) {
+                            // 目标位置为空，可以移动
+                            moves.push({ toRow: newRow, toCol: newCol, capture: false });
+                        } else {
+                            // 目标位置有棋子，检查是否可以跳跃
+                            const jumpRow = newRow + dir.dr;
+                            const jumpCol = newCol + dir.dc;
+                            
+                            if (this.isValidPosition(jumpRow, jumpCol) && 
+                                !this.board[jumpRow][jumpCol] && 
+                                this.board[newRow][newCol].player !== piece.player) {
+                                // 可以跳跃，添加跳跃移动
+                                moves.push({ 
+                                    toRow: jumpRow, 
+                                    toCol: jumpCol, 
+                                    capture: true, 
+                                    captureRow: newRow, 
+                                    captureCol: newCol 
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                return moves;
+            }
+            
+            movePiece(fromRow, fromCol, toRow, toCol) {
+                const piece = this.board[fromRow][fromCol];
+                if (!piece || piece.player !== this.currentPlayer) {
+                    this.selectedPiece = null;
+                    this.renderBoard();
+                    return;
+                }
+                
+                const possibleMoves = this.getPossibleMoves(fromRow, fromCol);
+                const validMove = possibleMoves.find(move => 
+                    move.toRow === toRow && move.toCol === toCol
+                );
+                
+                if (!validMove) {
+                    this.selectedPiece = null;
+                    this.renderBoard();
+                    return;
+                }
+                
+                // 执行移动
+                this.board[toRow][toCol] = {...piece};
+                
+                // 如果是跳跃，移除被吃的棋子
+                if (validMove.capture) {
+                    this.board[validMove.captureRow][validMove.captureCol] = null;
+                }
+                
+                // 移除原位置的棋子
+                this.board[fromRow][fromCol] = null;
+                
+                // 检查是否成为王棋
+                if (!piece.isKing) {
+                    if ((piece.player === 1 && toRow === 7) || (piece.player === 2 && toRow === 0)) {
+                        this.board[toRow][toCol].isKing = true;
+                    }
+                }
+                
+                // 检查是否有连续跳跃
+                if (validMove.capture) {
+                    const additionalJumps = this.getPossibleMoves(toRow, toCol).filter(move => move.capture);
+                    if (additionalJumps.length > 0) {
+                        // 玩家可以继续跳跃
+                        this.selectedPiece = { row: toRow, col: toCol };
+                        this.renderBoard();
+                        this.highlightPossibleMoves(toRow, toCol);
+                        return; // 不切换玩家
+                    }
+                }
+                
+                // 移动完成，切换玩家
+                this.selectedPiece = null;
+                this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+                
+                // 检查游戏是否结束
+                this.checkGameOver();
+                
+                this.renderBoard();
+                this.updateGameInfo();
+            }
+            
+            checkGameOver() {
+                let player1Pieces = 0;
+                let player2Pieces = 0;
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.board[row][col];
+                        if (piece) {
+                            if (piece.player === 1) player1Pieces++;
+                            else player2Pieces++;
+                        }
+                    }
+                }
+                
+                if (player1Pieces === 0) {
+                    document.getElementById('game-status').textContent = '游戏结束! 玩家 2 获胜!';
+                    this.gameOver = true;
+                } else if (player2Pieces === 0) {
+                    document.getElementById('game-status').textContent = '游戏结束! 玩家 1 获胜!';
+                    this.gameOver = true;
+                } else {
+                    // 检查当前玩家是否还有合法移动
+                    let hasValidMove = false;
+                    for (let row = 0; row < 8; row++) {
+                        for (let col = 0; col < 8; col++) {
+                            const piece = this.board[row][col];
+                            if (piece && piece.player === this.currentPlayer) {
+                                if (this.getPossibleMoves(row, col).length > 0) {
+                                    hasValidMove = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (hasValidMove) break;
+                    }
+                    
+                    if (!hasValidMove) {
+                        const winner = this.currentPlayer === 1 ? 2 : 1;
+                        document.getElementById('game-status').textContent = `游戏结束! 玩家 ${winner} 获胜!`;
+                        this.gameOver = true;
+                    }
+                }
+            }
+            
+            isValidPosition(row, col) {
+                return row >= 0 && row < 8 && col >= 0 && col < 8;
+            }
+            
+            updateGameInfo() {
+                if (!this.gameOver) {
+                    document.getElementById('current-player').textContent = `当前玩家: 玩家 ${this.currentPlayer}`;
+                    document.getElementById('game-status').textContent = '';
+                }
+            }
+            
+            resetGame() {
+                this.currentPlayer = 1;
+                this.selectedPiece = null;
+                this.gameOver = false;
+                this.initBoard();
+                this.renderBoard();
+                this.updateGameInfo();
+            }
+        }
+        
+        // 启动游戏
+        window.onload = () => {
+            new CheckersGame();
+        };
+    </script>
+</body>
+</html>
