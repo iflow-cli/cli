@@ -1,0 +1,146 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #6a93cb 0%, #a4bfef 100%);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.game-container {
+    text-align: center;
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    max-width: 800px;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.current-player {
+    color: #007bff;
+}
+
+.game-status {
+    color: #28a745;
+}
+
+.game-board {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    gap: 2px;
+    width: 420px;
+    height: 540px;
+    margin: 0 auto;
+    background-color: #8fbc8f;
+    border: 3px solid #5a7d5a;
+    border-radius: 5px;
+}
+
+.cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.3s;
+}
+
+.cell:hover {
+    background-color: #d4e8d4;
+}
+
+.cell.trap {
+    background-color: #ffcccb;
+}
+
+.cell.den {
+    background-color: #f0e68c;
+}
+
+.cell.river {
+    background-color: #87ceeb;
+}
+
+.cell.selected {
+    background-color: #ffff99;
+}
+
+.cell.valid-move {
+    background-color: #90ee90;
+}
+
+.animal {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+.animal.blue {
+    background-color: #007bff;
+}
+
+.animal.red {
+    background-color: #dc3545;
+}
+
+.game-controls {
+    margin: 20px 0;
+}
+
+button {
+    padding: 10px 20px;
+    margin: 0 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #6c757d;
+    color: white;
+}
+
+button:hover {
+    background-color: #5a6268;
+}
+
+.game-rules {
+    text-align: left;
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}
+
+.game-rules h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.game-rules ul {
+    margin-bottom: 0;
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>斗兽棋游戏</title>
+    <link rel="stylesheet" href="src/css/style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>斗兽棋游戏</h1>
+        <div class="game-info">
+            <div class="current-player">当前玩家: <span id="current-player">蓝方</span></div>
+            <div class="game-status" id="game-status">游戏进行中</div>
+        </div>
+        <div class="game-board" id="game-board">
+            <!-- 棋盘将通过JavaScript生成 -->
+        </div>
+        <div class="game-controls">
+            <button id="restart-btn">重新开始</button>
+            <button id="undo-btn">悔棋</button>
+        </div>
+        <div class="game-rules">
+            <h3>游戏规则:</h3>
+            <ul>
+                <li>按等级吃子：象(7) > 狮(6) > 虎(5) > 豹(4) > 狼(3) > 狗(2) > 猫(1) > 鼠(0)</li>
+                <li>鼠可以吃象，象不能吃鼠</li>
+                <li>河流中的棋子只能被同在河流的棋子吃掉（除了鼠）</li>
+                <li>进入对方陷阱的棋子会被移除</li>
+                <li>进入对方兽穴则获胜</li>
+            </ul>
+        </div>
+    </div>
+    <script src="src/js/game.js"></script>
+</body>
+</html>
