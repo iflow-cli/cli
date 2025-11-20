@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跳一跳游戏</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            margin: 0 auto;
+        }
+        
+        #game-board {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: #87CEEB;
+            border: 2px solid #333;
+            overflow: hidden;
+        }
+        
+        .platform {
+            position: absolute;
+            background-color: #2E8B57;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        
+        #player {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #FF4500;
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 10;
+            transition: left 0.3s, bottom 0.3s;
+        }
+        
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+        }
+        
+        #restart-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        #restart-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-board">
+            <div id="score">得分: 0</div>
+            <div id="player"></div>
+            <div id="game-over">
+                <h2>游戏结束!</h2>
+                <p>最终得分: <span id="final-score">0</span></p>
+                <button id="restart-btn">重新开始</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏逻辑将在下面实现
+        class JumpGame {
+            constructor() {
+                this.gameBoard = document.getElementById('game-board');
+                this.player = document.getElementById('player');
+                this.scoreElement = document.getElementById('score');
+                this.gameOverElement = document.getElementById('game-over');
+                this.finalScoreElement = document.getElementById('final-score');
+                this.restartBtn = document.getElementById('restart-btn');
+                
+                // 游戏状态
+                this.score = 0;
+                this.gameRunning = false;
+                this.currentPlatformIndex = 0;
+                
+                // 玩家属性
+                this.playerX = 185; // 初始位置
+                this.playerY = 50;  // 初始高度
+                this.playerBottom = 50; // 当前底部位置
+                this.playerVelocity = 0;
+                this.gravity = 0.5;
+                this.jumpForce = -12;
+                
+                // 平台数组
+                this.platforms = [];
+                
+                // 初始化游戏
+                this.init();
+            }
+            
+            init() {
+                // 创建初始平台
+                this.createPlatforms();
+                
+                // 设置玩家初始位置
+                this.player.style.left = this.playerX + 'px';
+                this.player.style.bottom = this.playerBottom + 'px';
+                
+                // 绑定事件
+                this.bindEvents();
+                
+                // 开始游戏
+                this.start();
+            }
+            
+            createPlatforms() {
+                // 清空现有平台
+                this.platforms.forEach(platform => {
+                    if (platform.element && platform.element.parentNode) {
+                        platform.element.parentNode.removeChild(platform.element);
+                    }
+                });
+                this.platforms = [];
+                
+                // 创建初始平台 - 地面
+                this.platforms.push({
+                    x: 0,
+                    y: 0,
+                    width: 400,
+                    height: 50,
+                    element: null
+                });
+                
+                // 创建其他平台
+                let lastX = 150;
+                let lastY = 50;
+                
+                for (let i = 1; i < 10; i++) {
+                    // 随机生成平台位置，确保在合理范围内
+                    const platformWidth = 60 + Math.random() * 40; // 60-100px宽
+                    const platformX = Math.max(20, Math.min(380 - platformWidth, lastX + (Math.random() * 100 - 50)));
+                    const platformY = lastY + 80 + Math.random() * 60; // 80-140px间隔
+                    
+                    this.platforms.push({
+                        x: platformX,
+                        y: platformY,
+                        width: platformWidth,
+                        height: 15,
+                        element: null
+                    });
+                    
+                    lastX = platformX;
+                    lastY = platformY;
+                }
+                
+                // 渲染平台
+                this.renderPlatforms();
+            }
+            
+            renderPlatforms() {
+                // 先移除现有平台元素
+                document.querySelectorAll('.platform').forEach(el => el.remove());
+                
+                // 创建平台元素
+                this.platforms.forEach((platform, index) => {
+                    if (index === 0) return; // 不渲染地面平台的元素，因为地面是固定的
+                    
+                    const platformEl = document.createElement('div');
+                    platformEl.className = 'platform';
+                    platformEl.style.left = platform.x + 'px';
+                    platformEl.style.bottom = platform.y + 'px';
+                    platformEl.style.width = platform.width + 'px';
+                    platformEl.style.height = platform.height + 'px';
+                    
+                    this.gameBoard.appendChild(platformEl);
+                    platform.element = platformEl;
+                });
+            }
+            
+            bindEvents() {
+                // 点击事件控制跳跃
+                this.gameBoard.addEventListener('click', (e) => {
+                    if (this.gameRunning) {
+                        this.jump();
+                    }
+                });
+                
+                // 重新开始按钮
+                this.restartBtn.addEventListener('click', () => {
+                    this.restart();
+                });
+            }
+            
+            jump() {
+                // 只有在站在平台上时才能跳跃
+                if (this.isOnPlatform()) {
+                    this.playerVelocity = this.jumpForce;
+                }
+            }
+            
+            isOnPlatform() {
+                // 检查玩家是否站在平台上
+                const playerRect = {
+                    left: this.playerX,
+                    right: this.playerX + 30,
+                    bottom: this.playerBottom,
+                    top: this.playerBottom + 30
+                };
+                
+                // 检查是否与任何平台碰撞（仅检查下方）
+                for (let i = 1; i < this.platforms.length; i++) {
+                    const platform = this.platforms[i];
+                    const platformRect = {
+                        left: platform.x,
+                        right: platform.x + platform.width,
+                        bottom: platform.y,
+                        top: platform.y + platform.height
+                    };
+                    
+                    // 检查水平重叠
+                    if (playerRect.right > platformRect.left && 
+                        playerRect.left < platformRect.right) {
+                        // 检查是否正好在平台上方，且下方有足够空间
+                        if (playerRect.bottom <= platformRect.top && 
+                            playerRect.bottom >= platformRect.top - 10) {
+                            return true;
+                        }
+                    }
+                }
+                
+                // 检查是否在地面平台上
+                if (this.playerBottom <= 50) {
+                    return true;
+                }
+                
+                return false;
+            }
+            
+            updatePlayer() {
+                // 应用重力
+                this.playerVelocity += this.gravity;
+                this.playerBottom += this.playerVelocity;
+                
+                // 检查平台碰撞
+                let landed = false;
+                for (let i = 1; i < this.platforms.length; i++) {
+                    const platform = this.platforms[i];
+                    const platformRect = {
+                        left: platform.x,
+                        right: platform.x + platform.width,
+                        bottom: platform.y,
+                        top: platform.y + platform.height
+                    };
+                    
+                    const playerRect = {
+                        left: this.playerX,
+                        right: this.playerX + 30,
+                        bottom: this.playerBottom,
+                        top: this.playerBottom + 30
+                    };
+                    
+                    // 检查水平重叠
+                    if (playerRect.right > platformRect.left && 
+                        playerRect.left < platformRect.right &&
+                        playerRect.bottom <= platformRect.top + 5 &&
+                        playerRect.bottom >= platformRect.top - 5 &&
+                        this.playerVelocity >= 0) { // 只有下落时才检测
+                        // 确保玩家在平台上方
+                        this.playerBottom = platformRect.top;
+                        this.playerVelocity = 0;
+                        landed = true;
+                        
+                        // 更新分数
+                        if (i > this.currentPlatformIndex) {
+                            this.currentPlatformIndex = i;
+                            this.score++;
+                            this.updateScore();
+                        }
+                        break;
+                    }
+                }
+                
+                // 检查是否掉落到地面
+                if (this.playerBottom <= 50) {
+                    this.playerBottom = 50;
+                    this.playerVelocity = 0;
+                    // 如果掉到地面且不是在第一个平台，则游戏结束
+                    if (this.currentPlatformIndex > 0) {
+                        this.gameOver();
+                        return;
+                    }
+                }
+                
+                // 检查是否掉出屏幕上方（额外安全检查）
+                if (this.playerBottom > 600) {
+                    this.gameOver();
+                    return;
+                }
+                
+                // 更新玩家位置
+                this.player.style.bottom = this.playerBottom + 'px';
+            }
+            
+            updateScore() {
+                this.scoreElement.textContent = `得分: ${this.score}`;
+            }
+            
+            start() {
+                this.gameRunning = true;
+                this.gameLoop();
+            }
+            
+            gameLoop() {
+                if (!this.gameRunning) return;
+                
+                this.updatePlayer();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+            
+            gameOver() {
+                this.gameRunning = false;
+                this.finalScoreElement.textContent = this.score;
+                this.gameOverElement.style.display = 'block';
+            }
+            
+            restart() {
+                this.score = 0;
+                this.currentPlatformIndex = 0;
+                this.playerBottom = 50;
+                this.playerVelocity = 0;
+                this.gameOverElement.style.display = 'none';
+                
+                this.player.style.bottom = this.playerBottom + 'px';
+                
+                this.createPlatforms();
+                this.updateScore();
+                
+                this.gameRunning = true;
+                this.gameLoop();
+            }
+        }
+        
+        // 启动游戏
+        window.addEventListener('load', () => {
+            const game = new JumpGame();
+        });
+    </script>
+</body>
+</html>
